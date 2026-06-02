@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.database import create_db_and_tables
@@ -7,6 +9,12 @@ from app.routers.doc_delete import router as delete_router
 from app.routers.get_text import router as get_text_router
 from app.routers.upload_doc import router as upload_router
 from app.storage import s3_storage
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_and_tables()
+    s3_storage.ensure_bucket()
+    yield
 
 app = FastAPI(
     title="UploadDoc API",
@@ -20,7 +28,6 @@ app.include_router(analyse_router)
 app.include_router(get_text_router)
 
 
-@app.on_event("startup")
-def on_startup() -> None:
-    create_db_and_tables()
-    s3_storage.ensure_bucket()
+
+
+
