@@ -1,10 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
-from app.database import SessionDep
 from app.schemas import DeleteDocResponse
-from app.service.document_service import document_service
+from app.service.document_service import DocumentService, get_document_service
 
 router = APIRouter()
 
@@ -16,9 +15,9 @@ router = APIRouter()
 )
 def doc_delete(
     doc_id: Annotated[int, Query(description="ID документа", alias="id")],
-    session: SessionDep,
+    service: DocumentService = Depends(get_document_service),
 ) -> DeleteDocResponse:
 
-    document_service.delete(session, doc_id)
+    service.delete(doc_id)
 
     return DeleteDocResponse(message="deleted", id=doc_id)

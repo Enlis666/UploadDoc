@@ -2,7 +2,7 @@ from sqlmodel import Session
 
 from app.celery_app import celery_app
 from app.database import engine
-from app.service.document_service import document_service
+from app.service.document_service import DocumentService
 from app.service.errors import DocumentNotFound
 
 
@@ -10,6 +10,6 @@ from app.service.errors import DocumentNotFound
 def analyse_document(doc_id: int) -> None:
     with Session(engine) as session:
         try:
-            document_service.run_ocr(session, doc_id)
+            DocumentService(session).run_ocr(doc_id)
         except DocumentNotFound:
             return

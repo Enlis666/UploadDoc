@@ -2,13 +2,13 @@ import pytest
 from sqlmodel import select
 
 from app.models import Documents, DocumentsText
-from app.service.document_service import document_service
+from app.service.document_service import DocumentService
 from app.service.errors import DocumentNotFound, TextNotReady
 
 
 @pytest.mark.asyncio
 async def test_valid_png_upload(test_good_png_image, session, mock_s3_upload):
-    doc = await document_service.upload(session, test_good_png_image)
+    doc = await DocumentService(session).upload(test_good_png_image)
     key, data, content_type = mock_s3_upload[0]
 
     assert key == doc.path
@@ -20,7 +20,7 @@ async def test_valid_png_upload(test_good_png_image, session, mock_s3_upload):
 
 def test_get_text_document_not_found(session):
     with pytest.raises(DocumentNotFound) as exc:
-        document_service.get_text(session, 999)
+        DocumentService(session).get_text(999)
     assert exc.value.doc_id == 999
 
 
@@ -31,7 +31,7 @@ def test_get_text_text_not_ready(session):
     session.refresh(doc)
 
     with pytest.raises(TextNotReady) as exc:
-        document_service.get_text(session, doc.id)
+        DocumentService(session).get_text(doc.id)
     assert exc.value.doc_id == doc.id
 
 
@@ -45,12 +45,12 @@ def test_get_text_returns_latest_text(session):
     session.add(DocumentsText(id_doc=doc.id, text="new"))
     session.commit()
 
-    assert document_service.get_text(session, doc.id) == "new"
+    assert DocumentService(session).get_text(doc.id) == "new"
 
 
 def test_delete_document_not_found(session):
     with pytest.raises(DocumentNotFound):
-        document_service.delete(session, 999)
+        DocumentService(session).delete(999)
 
 
 def test_delete_removes_doc_and_calls_s3(session, mock_s3_delete):
@@ -63,7 +63,7 @@ def test_delete_removes_doc_and_calls_s3(session, mock_s3_delete):
     session.add(DocumentsText(id_doc=doc.id, text="t2"))
     session.commit()
 
-    document_service.delete(session, doc.id)
+    DocumentService(session).delete(doc.id)
 
     assert session.get(Documents, doc.id) is None
     assert mock_s3_delete == [doc.path]
@@ -71,7 +71,7 @@ def test_delete_removes_doc_and_calls_s3(session, mock_s3_delete):
 
 def test_enqueue_analyse_document_not_found(session):
     with pytest.raises(DocumentNotFound):
-        document_service.enqueue_analyse(session, 999)
+        DocumentService(session).enqueue_analyse(999)
 
 
 def test_enqueue_analyse_calls_delay(session, mock_celery_delay):
@@ -80,13 +80,13 @@ def test_enqueue_analyse_calls_delay(session, mock_celery_delay):
     session.commit()
     session.refresh(doc)
 
-    document_service.enqueue_analyse(session, doc.id)
+    DocumentService(session).enqueue_analyse(doc.id)
     assert mock_celery_delay == [doc.id]
 
 
 def test_run_ocr_document_not_found(session):
     with pytest.raises(DocumentNotFound):
-        document_service.run_ocr(session, 999)
+        DocumentService(session).run_ocr(999)
 
 
 def test_run_ocr_saves_text(session, mock_s3_download, mock_tesseract):
@@ -104,7 +104,7 @@ def test_run_ocr_saves_text(session, mock_s3_download, mock_tesseract):
     )
     mock_tesseract["text"] = "hello"
 
-    document_service.run_ocr(session, doc.id)
+    DocumentService(session).run_ocr(doc.id)
 
     rows = session.exec(select(DocumentsText).where(DocumentsText.id_doc == doc.id)).all()
     assert len(rows) == 1

@@ -1,10 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
-from app.database import SessionDep
 from app.schemas import DocAnalyseResponse
-from app.service.document_service import document_service
+from app.service.document_service import DocumentService, get_document_service
 
 router = APIRouter()
 
@@ -17,9 +16,9 @@ router = APIRouter()
 )
 def doc_analyse(
     doc_id: Annotated[int, Query(description="ID документа", alias="id")],
-    session: SessionDep,
+    service: DocumentService = Depends(get_document_service),
 ) -> DocAnalyseResponse:
 
-    document_service.enqueue_analyse(session, doc_id)
+    service.enqueue_analyse(doc_id)
 
     return DocAnalyseResponse(status="accepted", id=doc_id)

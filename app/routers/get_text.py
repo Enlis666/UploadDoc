@@ -1,10 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
-from app.database import SessionDep
 from app.schemas import GetTextResponse
-from app.service.document_service import document_service
+from app.service.document_service import DocumentService, get_document_service
 
 router = APIRouter()
 
@@ -17,9 +16,9 @@ router = APIRouter()
 )
 def get_text(
     doc_id: Annotated[int, Query(description="ID документа", alias="id")],
-    session: SessionDep,
+    service: DocumentService = Depends(get_document_service),
 ) -> GetTextResponse:
 
-    text = document_service.get_text(session, doc_id)
+    text = service.get_text(doc_id)
 
     return GetTextResponse(id=doc_id, text=text)
