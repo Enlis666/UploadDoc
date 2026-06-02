@@ -1,0 +1,15 @@
+from sqlmodel import Session
+
+from app.celery_app import celery_app
+from app.database import engine
+from app.service.document_service import document_service
+from app.service.errors import DocumentNotFound
+
+
+@celery_app.task
+def analyse_document(doc_id: int) -> None:
+    with Session(engine) as session:
+        try:
+            document_service.run_ocr(session, doc_id)
+        except DocumentNotFound:
+            return
